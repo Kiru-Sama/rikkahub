@@ -39,7 +39,7 @@ jobs:
 
       - name: Create google-services.json placeholder
         run: |
-          echo '{}' > app/google-services.json
+          echo '{"project_info":{"project_number":"0","project_id":"placeholder","storage_bucket":"placeholder.appspot.com"},"client":[{"client_info":{"mobilesdk_app_id":"1:0:android:0000000000000000","android_client_info":{"package_name":"com.kirusi.rikkahub"}},"oauth_client":[],"api_key":[{"current_key":"placeholder"}],"services":{"appinvite_service":{"other_platform_oauth_client":[]}}}],"configuration_version":"1"}' > app/google-services.json
 
       - name: Gradle cache
         uses: actions/cache@v4
