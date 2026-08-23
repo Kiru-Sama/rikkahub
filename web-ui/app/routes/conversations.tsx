@@ -350,6 +350,9 @@ function useConversationDetail(activeId: string | null, updateSummary: Conversat
         setDetailLoading(false);
       });
 
+    const notifiedSearchCallIds = React.useRef<Set<string>>(new Set());
+    const loader2Icon = React.useMemo(() => React.createElement('svg', { className: 'size-4 animate-spin', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2 }, React.createElement('path', { d: 'M21 12a9 9 0 11-6.219-8.56' })), []);
+
     void sse<ConversationStreamEvent>(
       `conversations/${activeId}/stream`,
       {
@@ -362,7 +365,7 @@ function useConversationDetail(activeId: string | null, updateSummary: Conversat
           }
 
           if (event === "snapshot" && data.type === "snapshot") {
-            useAppStore.getState().setClockOffset(data.serverTime);
+                      useAppStore.getState().setClockOffset(data.serverTime);
             setDetail(data.conversation);
             updateSummary(toConversationSummaryUpdate(data.conversation));
             setDetailError(null);
@@ -372,7 +375,34 @@ function useConversationDetail(activeId: string | null, updateSummary: Conversat
 
           if (event !== "node_update" || data.type !== "node_update") return;
 
-          useAppStore.getState().setClockOffset(data.serverTime);
+                    // 检测搜索工具调用，显示搜索状态提示（APITOOL 风格）
+          var updatedNode = data.node;
+          if (updatedNode && updatedNode.messages) {
+            for (var msgIdx = 0; msgIdx < updatedNode.messages.length; msgIdx++) {
+              var msg = updatedNode.messages[msgIdx];
+              if (msg.role !== "assistant") continue;
+              for (var partIdx = 0; partIdx < msg.parts.length; partIdx++) {
+                var part = msg.parts[partIdx];
+                if (part.type !== "tool") continue;
+                if (part.toolName !== "search_web") continue;
+                var callId = part.toolCallId;
+                if (!callId || notifiedSearchCallIds.current.has(callId)) continue;
+                notifiedSearchCallIds.current.add(callId);
+                if (!part.output || part.output.length === 0) {
+                  toast("联网搜索中...", {
+                    id: "search-" + callId,
+                    icon: loader2Icon,
+                    duration: Infinity,
+                  });
+                } else {
+                  toast.dismiss("search-" + callId);
+                  toast.success("搜索完成");
+                }
+              }
+            }
+          }
+
+useAppStore.getState().setClockOffset(data.serverTime);
           setDetail((prev) => {
             if (!prev) return prev;
             const next = applyNodeUpdate(prev, data);
